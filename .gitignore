@@ -1,0 +1,26 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Banco de dados e backups
+*.db
+*.db-journal
+backup_escala_*.db
+
+# Logs
+*.log
+server.log
+
+# Sistema/macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.python-version
+
+# IDE
+.vscode/
+.idea/

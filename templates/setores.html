@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Setores & Demanda · ScalePro{% endblock %}
+{% block content %}
+<style>
+  .matriz { overflow-x: auto; }
+  .matriz table { min-width: 900px; }
+  .matriz th, .matriz td { text-align: center; }
+  .matriz td.setor { text-align: left; font-weight: 600; }
+  .cobertura-ok { color: #16a34a; font-weight: 700; }
+  .cobertura-atencao { color: #d97706; font-weight: 700; }
+  .cobertura-critico { color: #dc2626; font-weight: 700; }
+  .indicadores { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .ind { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+         padding: 6px 12px; font-size: 12.5px; }
+  .ind b { display: block; font-size: 16px; }
+</style>
+
+<div class="page-header anim">
+  <div>
+    <h1>Setores & Demanda</h1>
+    <div class="sub">Faixas horárias configuráveis e necessidade por setor</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a class="btn {{ 'btn-primary' if visao=='cards' else 'btn-outline' }}" href="{{ url_for('setores', visao='cards') }}">Cards</a>
+    <a class="btn {{ 'btn-primary' if visao=='matriz' else 'btn-outline' }}" href="{{ url_for('setores', visao='matriz') }}">Matriz</a>
+  </div>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Novo setor</h2>
+  <form method="post" class="form-row">
+    <div class="field" style="flex:1; min-width:240px"><label>Nome do setor</label>
+      <input type="text" name="nome" required placeholder="Ex.: Operação de Caixa"></div>
+    <button class="btn btn-green" type="submit">+ Criar setor</button>
+  </form>
+</div>
+
+{% if visao == 'matriz' %}
+<!-- ===== VISÃO MATRIZ ===== -->
+<div class="card anim anim-2">
+  <h2>Matriz de demanda (faixas × setor)</h2>
+  <div class="matriz">
+    <table>
+      <thead>
+        <tr><th class="setor">Setor</th>
+          {% for fx in faixas %}<th>{{ fx }}</th>{% endfor %}
+          <th>Ativos</th><th>Pico</th><th>Pico em</th><th>Cobertura</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in setores %}
+        <tr>
+          <td class="setor">{{ s.nome }}</td>
+          {% for fx in faixas %}
+          <td>{{ s.dem_faixas.get(fx, 0) or '—' }}</td>
+          {% endfor %}
+          <td>{{ s.ativos }}</td>
+          <td><b>{{ s.maior_pico }}</b></td>
+          <td>{{ s.faixa_pico or '—' }}</td>
+          <td class="{{ 'cobertura-ok' if s.cobertura_pct is not none and s.cobertura_pct >= 100 else ('cobertura-atencao' if s.cobertura_pct is not none and s.cobertura_pct >= 70 else 'cobertura-critico') }}">
+            {{ (s.cobertura_pct|string + '%') if s.cobertura_pct is not none else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:10px">Cobertura = disponíveis ÷ pico da faixa mais exigente. Clique em Cards para editar a demanda de cada setor.</p>
+</div>
+
+{% else %}
+<!-- ===== VISÃO CARDS ===== -->
+{% for s in setores %}
+<div class="card anim" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px">
+    <h2 style="margin:0">{{ s.nome }}</h2>
+    <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_setor', sid=s.id) }}"
+       onclick="return confirm('Excluir o setor {{ s.nome }}?')">Excluir</a>
+  </div>
+
+  <div class="indicadores">
+    <div class="ind">Ativos <b>{{ s.ativos }}</b></div>
+    <div class="ind">Disponíveis <b>{{ s.disponiveis }}</b></div>
+    <div class="ind">Escalados hoje <b>{{ s.escalados }}</b></div>
+    <div class="ind">Maior pico <b>{{ s.maior_pico }}</b></div>
+    <div class="ind">Faixa de pico <b>{{ s.faixa_pico or '—' }}</b></div>
+    <div class="ind">Cobertura
+      <b class="{{ 'cobertura-ok' if s.cobertura_pct is not none and s.cobertura_pct >= 100 else ('cobertura-atencao' if s.cobertura_pct is not none and s.cobertura_pct >= 70 else 'cobertura-critico') }}">
+        {{ (s.cobertura_pct|string + '%') if s.cobertura_pct is not none else '—' }}</b>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('salvar_demanda', sid=s.id) }}" style="margin-top:14px">
+    <div class="form-row" style="margin-bottom:10px">
+      {% for fx in faixas %}
+      <div class="field" style="flex:1; min-width:84px">
+        <label>{{ fx }}</label>
+        <input type="number" name="faixa_{{ fx }}" min="0" value="{{ s.dem_faixas.get(fx, 0) or '' }}" placeholder="0">
+      </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit">💾 Salvar demanda</button>
+  </form>
+</div>
+{% else %}
+<div class="card anim"><p class="empty">Nenhum setor criado ainda. Crie o primeiro acima. 👆</p></div>
+{% endfor %}
+{% endif %}
+{% endblock %}

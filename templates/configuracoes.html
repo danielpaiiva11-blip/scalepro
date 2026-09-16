@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Configurações · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Configurações</h1>
+    <div class="sub">Identidade da empresa e dados</div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card anim anim-1">
+    <h2>Identidade da empresa</h2>
+    <form method="post">
+      <div class="field"><label>Nome da empresa</label>
+        <input type="text" name="nome_empresa" value="{{ nome_empresa }}" required></div>
+      <div style="margin-top:16px">
+        <button class="btn btn-green" type="submit">💾 Salvar</button>
+      </div>
+    </form>
+    <p class="muted" style="margin-top:12px">Esse nome aparece no topo do sistema, na tela de login e no PDF das escalas.</p>
+  </div>
+
+  <div class="card anim anim-2">
+    <h2>Base demonstrativa</h2>
+    <p class="muted">Carrega uma operação fictícia coerente (70 funcionários, demandas, ausências e escala) para demonstração. Apaga os dados atuais.</p>
+    <form method="post" action="{{ url_for('carregar_base_demo') }}" style="margin-top:8px">
+      <button class="btn btn-green" type="submit"
+        onclick="return confirm('Isso substituirá TODOS os dados atuais por uma base demonstrativa fictícia. Continuar?')">
+        🧪 Carregar base demonstrativa</button>
+    </form>
+  </div>
+
+  <div class="card anim anim-3">
+    <h2>Backup do banco de dados</h2>
+    <p class="muted">Salve uma cópia da base para não perder os dados.</p>
+    <div style="display:flex; gap:10px; margin-top:8px">
+      <a class="btn btn-outline" href="{{ url_for('backup_exportar') }}">⬇️ Exportar backup</a>
+    </div>
+    <form method="post" action="{{ url_for('backup_importar') }}" enctype="multipart/form-data" style="margin-top:16px">
+      <div class="field"><label>Restaurar backup (arquivo .db)</label>
+        <input type="file" name="arquivo" accept=".db" style="padding:8px"></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-outline" type="submit" onclick="return confirm('Restaurar substituirá todos os dados atuais. Continuar?')">↩️ Restaurar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

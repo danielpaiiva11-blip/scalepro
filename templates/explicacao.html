@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Explicação da Escala · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Por que esta pessoa foi selecionada?</h1>
+    <div class="sub">Algoritmo auditável — transparência da decisão</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('escala_view') }}">← Voltar</a>
+</div>
+
+<div class="card anim anim-1">
+  <h2>{{ info.nome }}</h2>
+  <p class="muted">{{ info.setor }}{% if data %} · {{ data[8:10] }}/{{ data[5:7] }}/{{ data[:4] }}{% endif %}</p>
+</div>
+
+<div class="card anim anim-2">
+  <h2>Critérios que levaram à seleção</h2>
+  <ul style="font-size:15px; line-height:2; padding-left:20px">
+    {% for m in info.motivos %}
+    <li>✓ {{ m }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card anim anim-3">
+  <h2>Indicadores do funcionário</h2>
+  <table>
+    <tr><td>Total de escalas</td><td class="num"><strong>{{ info.metricas.total }}</strong></td></tr>
+    <tr><td>Horas extras (fds/feriado)</td><td class="num"><strong>{{ info.metricas.horas_extras }}</strong></td></tr>
+    <tr><td>Domingos trabalhados</td><td class="num"><strong>{{ info.metricas.domingos }}</strong></td></tr>
+    <tr><td>Feriados trabalhados</td><td class="num"><strong>{{ info.metricas.feriados }}</strong></td></tr>
+    <tr><td>Última escala</td><td class="num"><strong>{{ info.metricas.ultima or 'Nunca' }}</strong></td></tr>
+  </table>
+</div>
+{% endblock %}

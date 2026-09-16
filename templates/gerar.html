@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Gerar Escala · ScalePro{% endblock %}
+{% block content %}
+<style>
+  .modo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .modo-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px;
+               cursor: pointer; transition: all .16s; background: #fff; }
+  .modo-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+  .modo-card.sel { border-color: #2563eb; background: #eff6ff; box-shadow: 0 4px 14px rgba(37,99,235,.18); }
+  .modo-card .mn { font-weight: 700; font-size: 14px; }
+  .modo-card .md { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .painel { position: sticky; top: 20px; }
+  .painel h3 { margin: 0 0 6px; font-size: 17px; }
+  .painel ul { margin: 8px 0; padding-left: 18px; line-height: 1.7; font-size: 13.5px; }
+  .painel .tag { display: inline-block; background: #eff6ff; color: #1d4ed8; border-radius: 6px;
+                 padding: 2px 8px; font-size: 12px; font-weight: 600; margin: 2px 4px 2px 0; }
+  .ad-table td, .ad-table th { padding: 7px 10px; font-size: 13.5px; }
+</style>
+
+<div class="page-header anim">
+  <div>
+    <h1>Gerar escala</h1>
+    <div class="sub">Escolha o modo de geração e simule antes de salvar</div>
+  </div>
+</div>
+
+{% if preview %}
+<!-- ===== PRÉ-VISUALIZAÇÃO ===== -->
+<div class="card anim" style="border-color:#bbf7d0; background:#f0fdf4">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+    <div>
+      <h2 style="margin:0">✅ Simulação pronta</h2>
+      <p class="muted" style="margin-top:4px">
+        {{ preview.total }} alocações · {{ preview.escopo }} · {{ meses[preview.mes-1] }}/{{ preview.ano }} ·
+        modo: <strong>{{ modos[preview.modo].nome }}</strong>
+      </p>
+    </div>
+    <div style="display:flex; gap:10px">
+      <a class="btn btn-outline" href="{{ url_for('gerar') }}">← Voltar</a>
+      <form method="post" style="margin:0">
+        <input type="hidden" name="mes" value="{{ preview.mes }}">
+        <input type="hidden" name="ano" value="{{ preview.ano }}">
+        <input type="hidden" name="qtd" value="{{ preview.qtd }}">
+        <input type="hidden" name="tipo" value="{{ preview.tipo }}">
+        <input type="hidden" name="modo" value="{{ preview.modo }}">
+        <input type="hidden" name="setor_id" value="{{ preview.sid }}">
+        <input type="hidden" name="confirmar" value="1">
+        <button class="btn btn-green" type="submit">💾 Salvar como rascunho</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div>
+    {% for d in preview.datas %}
+    <div class="day-card anim" style="animation-delay: {{ loop.index0 * 0.03 }}s">
+      <div class="day-head">
+        <div><div class="date">{{ d.data[8:10] }}/{{ d.data[5:7] }}/{{ d.data[:4] }}</div></div>
+        <span class="badge b-green">{{ d.pessoas|length }} pessoa{{ 's' if d.pessoas|length != 1 }}</span>
+      </div>
+      <div class="day-body">
+        <table>
+          <thead><tr><th style="width:36px" class="num">#</th><th>Nome</th></tr></thead>
+          <tbody>
+            {% for p in d.pessoas %}
+            <tr><td class="num muted">{{ loop.index }}</td><td>{{ p }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div>
+    <div class="card anim painel">
+      <h2>Resumo</h2>
+      <table>
+        <tr><td>Total de alocações</td><td class="num"><strong>{{ preview.total }}</strong></td></tr>
+        <tr><td>Dias no período</td><td class="num"><strong>{{ preview.datas|length }}</strong></td></tr>
+        {% if preview.qtd %}<tr><td>Pessoas por dia</td><td class="num"><strong>{{ preview.qtd }}</strong></td></tr>{% endif %}
+        <tr><td>Modo</td><td class="num"><span class="badge b-blue">{{ modos[preview.modo].nome }}</span></td></tr>
+        <tr><td>Status inicial</td><td class="num"><span class="badge b-purple">Rascunho</span></td></tr>
+      </table>
+      <p class="muted" style="margin-top:12px">A escala é salva como <strong>rascunho</strong>. Valide, teste a cobertura e aprove antes de publicar.</p>
+    </div>
+
+    {% if preview.antes_depois %}
+    {% set ad = preview.antes_depois %}
+    <div class="card anim painel" style="border-color:#bfdbfe; background:#f8fafc">
+      <h2>Impacto projetado <span class="muted" style="font-size:12px">· {{ ad.dia[8:10] }}/{{ ad.dia[5:7] }}</span></h2>
+      <table class="ad-table">
+        <thead><tr><th></th><th class="num">Antes</th><th class="num">Depois</th></tr></thead>
+        <tbody>
+          <tr><td>Cobertura</td>
+            <td class="num">{{ ad.antes.cobertura ~ '%' if ad.antes.cobertura is not none else '—' }}</td>
+            <td class="num" style="color:#16a34a; font-weight:800">{{ ad.depois.cobertura ~ '%' if ad.depois.cobertura is not none else '—' }}</td></tr>
+          <tr><td>Déficit</td>
+            <td class="num">{{ ad.antes.deficit }}</td>
+            <td class="num" style="color:{{ '#16a34a' if ad.depois.deficit < ad.antes.deficit else '#dc2626' }}; font-weight:800">{{ ad.depois.deficit }}</td></tr>
+          <tr><td>Excesso</td>
+            <td class="num">{{ ad.antes.excesso }}</td>
+            <td class="num" style="color:{{ '#16a34a' if ad.depois.excesso < ad.antes.excesso else '#d97706' }}; font-weight:800">{{ ad.depois.excesso }}</td></tr>
+          <tr><td>Remanejados</td><td class="num">—</td>
+            <td class="num" style="font-weight:800; color:#7c3aed">{{ ad.remanejados }}</td></tr>
+          <tr><td>Scale Score</td>
+            <td class="num">{{ ad.antes.score }}</td>
+            <td class="num" style="color:#2563eb; font-weight:800">{{ ad.depois.score }}</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:8px">Projeção calculada sobre a demanda real do dia. Confirme para salvar como rascunho.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% else %}
+<!-- ===== PARÂMETROS ===== -->
+<div class="grid g2">
+  <div>
+    <div class="card anim anim-1">
+      <h2>Modo de geração</h2>
+      <div class="modo-grid" id="modoGrid">
+        {% for key, m in modos.items() %}
+        <div class="modo-card {{ 'sel' if key == modo }}" data-modo="{{ key }}">
+          <div class="mn">{{ m.nome }}</div>
+          <div class="md">{{ m.objetivo[:60] }}...</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card anim anim-2">
+      <h2>Parâmetros</h2>
+      <form method="post" id="formGerar">
+        <input type="hidden" name="modo" id="campoModo" value="{{ modo }}">
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="field"><label>Mês</label>
+            <select name="mes">
+              {% for m in range(1, 13) %}<option value="{{ m }}" {{ 'selected' if m == mes }}>{{ meses[m-1] }}</option>{% endfor %}
+            </select></div>
+          <div class="field"><label>Ano</label>
+            <input type="number" name="ano" value="{{ ano }}" style="width:100px"></div>
+          <div class="field"><label>Tipo de dia</label>
+            <select name="tipo">
+              <option value="fds">Fins de semana</option>
+              <option value="feriado">Feriados</option>
+              <option value="semana">Mês inteiro</option>
+            </select></div>
+          <div class="field"><label>Setor</label>
+            <select name="setor_id">
+              <option value="">Todos os setores</option>
+              {% for s in setores %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="field" style="margin-bottom:12px" id="campoQtd">
+          <label>Pessoas por dia (ignorado no modo por pico)</label>
+          <input type="number" name="qtd" value="25" min="1">
+        </div>
+        <label class="checkbox"><input type="checkbox" name="limpar"> Substituir a escala existente do período</label>
+        <div style="margin-top:16px">
+          <button class="btn btn-green" type="submit">⚡ Simular escala</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div>
+    <div class="card anim anim-3 painel">
+      <h2>Como este modo funciona</h2>
+      <h3 id="painelNome">{{ modos[modo].nome }}</h3>
+      <p class="muted" id="painelObjetivo">{{ modos[modo].objetivo }}</p>
+      <div style="margin-top:10px"><strong style="font-size:13px">Prioriza:</strong>
+        <div id="painelPrioriza">
+          {% for p in modos[modo].prioriza %}<span class="tag">✓ {{ p }}</span>{% endfor %}
+        </div>
+      </div>
+      <div style="margin-top:10px"><strong style="font-size:13px">Ideal para:</strong>
+        <div class="muted" id="painelIdeal">{{ modos[modo].ideal }}</div>
+      </div>
+      <div style="margin-top:10px"><strong style="font-size:13px">Menor prioridade:</strong>
+        <div class="muted" id="painelMenor">{{ modos[modo].menor_prioridade }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+var MODOS = {{ modos|tojson }};
+document.querySelectorAll('#modoGrid .modo-card').forEach(function(card){
+  card.addEventListener('click', function(){
+    var m = card.dataset.modo;
+    document.querySelectorAll('#modoGrid .modo-card').forEach(function(c){ c.classList.remove('sel'); });
+    card.classList.add('sel');
+    document.getElementById('campoModo').value = m;
+    var info = MODOS[m];
+    document.getElementById('painelNome').textContent = info.nome;
+    document.getElementById('painelObjetivo').textContent = info.objetivo;
+    document.getElementById('painelPrioriza').innerHTML =
+      info.prioriza.map(function(p){ return '<span class="tag">✓ ' + p + '</span>'; }).join('');
+    document.getElementById('painelIdeal').textContent = info.ideal;
+    document.getElementById('painelMenor').textContent = info.menor_prioridade;
+    // esconde qtd quando modo for pico
+    document.getElementById('campoQtd').style.display = (m === 'por_pico') ? 'none' : '';
+  });
+});
+</script>
+{% endblock %}

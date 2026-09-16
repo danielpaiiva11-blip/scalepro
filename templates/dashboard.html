@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="sub">Visão geral da operação · {{ hoje.strftime('%d/%m/%Y') }}</div>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('gerar') }}">⚡ Gerar nova escala</a>
+</div>
+
+{% if alertas %}
+<div class="card anim" style="padding:12px 18px">
+  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+    <span style="font-weight:700; font-size:13px; margin-right:4px">🔔 Alertas:</span>
+    {% for a in alertas %}
+    <span class="badge {{ 'b-red' if a.nivel=='critico' else ('b-amber' if a.nivel=='atencao' else 'b-blue') }}" style="font-size:12px; padding:4px 10px">{{ a.txt }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="kpi-row">
+  <div class="kpi anim anim-1" style="--kc:#2563eb">
+    <div class="k-label">Funcionários ativos</div>
+    <div class="k-value" data-count="{{ kpis.funcionarios }}">0</div>
+    <div class="k-hint">em toda a empresa</div>
+  </div>
+  <div class="kpi anim anim-2" style="--kc:#7c3aed">
+    <div class="k-label">Setores</div>
+    <div class="k-value" data-count="{{ kpis.setores }}">0</div>
+    <div class="k-hint">caixa, açougue, estoque...</div>
+  </div>
+  <div class="kpi anim anim-3" style="--kc:#f59e0b">
+    <div class="k-label">Alocações 30 dias</div>
+    <div class="k-value" data-count="{{ kpis.escalas_30d }}">0</div>
+    <div class="k-hint">escalas futuras lançadas</div>
+  </div>
+  <div class="kpi anim anim-4" style="--kc:#ef4444">
+    <div class="k-label">Feriados à frente</div>
+    <div class="k-value" data-count="{{ kpis.feriados }}">0</div>
+    <div class="k-hint">cadastrados no sistema</div>
+  </div>
+  <div class="kpi anim anim-5" style="--kc:#22c55e">
+    <div class="k-label">Cobertura de demanda</div>
+    <div class="k-value" {% if kpis.cobertura is not none %}data-count="{{ kpis.cobertura }}"{% endif %}>
+      {{ (kpis.cobertura ~ '%') if kpis.cobertura is not none else '—' }}</div>
+    <div class="k-hint">efetivo vs pico necessário</div>
+  </div>
+  <div class="kpi anim" style="--kc:#8b5cf6">
+    <div class="k-label">Scale Score</div>
+    <div class="k-value">{{ diag.score }}<small style="font-size:15px">/100</small></div>
+    <div class="k-hint">{{ diag.classificacao }}</div>
+  </div>
+  <div class="kpi anim" style="--kc:#14b8a6">
+    <div class="k-label">Índice de equidade</div>
+    <div class="k-value">{{ equidade ~ '%' if equidade is not none else '—' }}</div>
+    <div class="k-hint">distribuição da escala</div>
+  </div>
+  <div class="kpi anim" style="--kc:#f59e0b">
+    <div class="k-label">Próximo pico</div>
+    <div class="k-value" style="font-size:24px">{{ prox_pico or '—' }}</div>
+    <div class="k-hint">{{ ('Feriado: ' ~ prox_feriado.nome) if prox_feriado else 'próxima hora de fluxo' }}</div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card anim anim-2">
+    <h2>Escala dos próximos 30 dias</h2>
+    {% if escala_dias.vals %}<canvas id="chDias" height="120"></canvas>
+    {% else %}<p class="empty">Nenhuma escala futura. Gere uma escala para ver o gráfico.</p>{% endif %}
+  </div>
+  <div class="card anim anim-3">
+    <h2>Pico por período (necessário)</h2>
+    {% if pico_periodos|sum > 0 %}<canvas id="chPico" height="150"></canvas>
+    {% else %}<p class="empty">Cadastre a demanda dos setores para ver os horários de pico.</p>{% endif %}
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card anim anim-4">
+    <h2>Cobertura por setor</h2>
+    {% if cobertura %}
+      {% for c in cobertura %}
+      <div style="margin-bottom:16px">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+          <strong style="font-size:14px">{{ c.nome }}</strong>
+          <span class="muted">{{ c.ativos }} disp. / pico {{ c.pico if c.pico else '—' }}</span>
+        </div>
+        {% if c.pct is not none %}
+        <div class="progress {{ 'bad' if c.pct < 60 else ('warn' if c.pct < 100 else '') }}">
+          <div style="width: {{ [c.pct, 100]|min }}%"></div>
+        </div>
+        {% else %}
+        <div class="muted" style="font-size:12.5px">Demanda não configurada</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <p class="empty">Cadastre setores para acompanhar a cobertura.</p>
+    {% endif %}
+  </div>
+
+  <div class="card anim anim-5">
+    <h2>Funcionários por setor</h2>
+    {% if func_setor.vals %}<canvas id="chSetor" height="170"></canvas>
+    {% else %}<p class="empty">Cadastre funcionários para ver a distribuição.</p>{% endif %}
+  </div>
+</div>
+
+{% if top %}
+<div class="card anim">
+  <h2>Top 5 — mais escalados</h2>
+  <table>
+    <thead><tr><th>#</th><th>Funcionário</th><th class="num">Escalas</th></tr></thead>
+    <tbody>
+      {% for t in top %}
+      <tr><td>{{ loop.index }}</td><td><strong>{{ t.nome }}</strong></td>
+          <td class="num"><span class="badge b-blue">{{ t.c }}</span></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+/* Contador animado dos KPIs */
+document.querySelectorAll("[data-count]").forEach(el => {
+  const target = +el.dataset.count, dur = 900, t0 = performance.now();
+  (function tick(t) {
+    const p = Math.min((t - t0) / dur, 1);
+    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) +
+      (el.dataset.suffix || "");
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+});
+
+const palette = ["#2563eb","#7c3aed","#f59e0b","#22c55e","#ef4444","#06b6d4","#ec4899","#84cc16"];
+
+{% if escala_dias.vals %}
+new Chart(chDias, { type: "bar",
+  data: { labels: {{ escala_dias.labels|tojson }},
+          datasets: [{ data: {{ escala_dias.vals|tojson }},
+                       backgroundColor: "#2563eb", borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } },
+             scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+             animation: { duration: 900, easing: "easeOutQuart" } } });
+{% endif %}
+
+{% if pico_periodos|sum > 0 %}
+new Chart(chPico, { type: "bar",
+  data: { labels: {{ PERIODOS|tojson }},
+          datasets: [{ data: {{ pico_periodos|tojson }},
+                       backgroundColor: ["#f59e0b","#2563eb","#7c3aed"],
+                       borderRadius: 8 }] },
+  options: { indexAxis: "y", plugins: { legend: { display: false } },
+             scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+             animation: { duration: 900, easing: "easeOutQuart" } } });
+{% endif %}
+
+{% if func_setor.vals %}
+new Chart(chSetor, { type: "doughnut",
+  data: { labels: {{ func_setor.labels|tojson }},
+          datasets: [{ data: {{ func_setor.vals|tojson }},
+                       backgroundColor: palette, borderWidth: 2, borderColor: "#fff" }] },
+  options: { plugins: { legend: { position: "bottom" } }, cutout: "62%",
+             animation: { animateRotate: true, duration: 1100 } } });
+{% endif %}
+</script>
+{% endblock %}

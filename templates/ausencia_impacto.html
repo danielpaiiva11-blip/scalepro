@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Impacto de Ausências · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Impacto das ausências de hoje</h1>
+    <div class="sub">{{ hoje[8:10] }}/{{ hoje[5:7] }}/{{ hoje[:4] }}</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('ausencias') }}">← Voltar</a>
+</div>
+
+{% if resultados %}
+<div class="card anim anim-1">
+  <h2>Efeito na cobertura</h2>
+  {% for r in resultados %}
+  <div class="alerta-item {{ 'r' if r.cobertura is not none and r.cobertura < 70 else ('a' if r.cobertura is not none and r.cobertura < 100 else '') }}"
+       style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; margin-bottom:10px;
+              {{ 'background:#fef2f2;border:1px solid #fecaca' if r.cobertura is not none and r.cobertura < 70 else ('background:#fffbeb;border:1px solid #fde68a' if r.cobertura is not none and r.cobertura < 100 else 'background:#f0fdf4;border:1px solid #bbf7d0') }}">
+    <span style="font-size:22px">{{ '🔴' if r.cobertura is not none and r.cobertura < 70 else ('🟠' if r.cobertura is not none and r.cobertura < 100 else '🟢') }}</span>
+    <div style="flex:1">
+      <strong>{{ r.nome }}</strong> ({{ r.tipo }}) — {{ r.setor }}<br>
+      <span class="muted">Demanda: {{ r.demanda }} · Escalados: {{ r.escalados }} · Efetivo: {{ r.efetivo }} · Cobertura: <strong>{{ r.cobertura ~ '%' if r.cobertura is not none else '—' }}</strong></span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card anim">
+  <p class="empty">Nenhuma ausência registrada para hoje. 👍</p>
+</div>
+{% endif %}
+{% endblock %}

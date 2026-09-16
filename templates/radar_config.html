@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Configurar Radar · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Configurar Radar de Pico</h1>
+    <div class="sub">Horário de funcionamento, turnos e demanda por hora</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('radar') }}">← Voltar ao radar</a>
+</div>
+
+<form method="post">
+  <div class="card anim anim-1">
+    <h2>Horário de funcionamento</h2>
+    <div class="form-row">
+      <div class="field"><label>Abertura</label>
+        <input type="time" name="abertura" value="{{ abertura }}"></div>
+      <div class="field"><label>Fechamento</label>
+        <input type="time" name="fechamento" value="{{ fechamento }}"></div>
+    </div>
+  </div>
+
+  <div class="card anim anim-2">
+    <h2>Turnos (entrada / saída)</h2>
+    <p class="muted" style="margin-top:-6px">O radar conta quem está presente somando os turnos.</p>
+    <div class="form-row">
+      {% for t in turnos %}
+      <div class="field" style="flex:1; min-width:180px">
+        <label>{{ t.nome }}</label>
+        <div style="display:flex; gap:6px">
+          <input type="time" name="turno_entrada_{{ t.id }}" value="{{ t.entrada }}" title="Entrada">
+          <input type="time" name="turno_saida_{{ t.id }}" value="{{ t.saida }}" title="Saída">
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card anim anim-3">
+    <h2>Demanda por hora (quantos funcionários são necessários)</h2>
+    <p class="muted" style="margin-top:-6px">Deixe em branco as horas fora do funcionamento.</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px">
+      {% for h in range(24) %}
+      <div class="field">
+        <label>{{ '%02d:00' % h }}</label>
+        <input type="number" name="dem_hora_{{ h }}" min="0"
+               value="{{ dem.get(h, '') if dem.get(h) is not none else '' }}" placeholder="—">
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="margin-top:8px">
+    <button class="btn btn-green" type="submit">💾 Salvar configuração</button>
+  </div>
+</form>
+{% endblock %}

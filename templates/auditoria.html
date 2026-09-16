@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Auditoria · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Auditoria</h1>
+    <div class="sub">Histórico de ações no sistema (200 mais recentes)</div>
+  </div>
+</div>
+
+<div class="card anim">
+  <table>
+    <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhe</th></tr></thead>
+    <tbody>
+      {% for l in logs %}
+      <tr>
+        <td style="white-space:nowrap">{{ l.quando }}</td>
+        <td><strong>{{ l.usuario or '—' }}</strong></td>
+        <td><span class="badge b-blue">{{ l.acao }}</span></td>
+        <td class="muted">{{ l.detalhe or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">Nenhuma ação registrada ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

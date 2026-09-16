@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Meu Perfil · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Meu perfil</h1>
+    <div class="sub">Altere sua senha de acesso</div>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card anim anim-1">
+    <h2>Dados da conta</h2>
+    <table>
+      <tr><td>Nome</td><td><strong>{{ g.user.nome }}</strong></td></tr>
+      <tr><td>Login</td><td>{{ g.user.usuario }}</td></tr>
+      <tr><td>Cargo</td><td>{{ g.user.cargo or '—' }}</td></tr>
+      <tr><td>Nível</td><td><span class="badge {{ 'b-amber' if g.user.role == 'admin' else 'b-green' }}">{{ 'Administrador' if g.user.role == 'admin' else 'Supervisor' }}</span></td></tr>
+      {% if g.user.setor %}<tr><td>Setor</td><td>{{ g.user.setor }}</td></tr>{% endif %}
+    </table>
+  </div>
+
+  <div class="card anim anim-2">
+    <h2>Trocar senha</h2>
+    <form method="post">
+      <div class="field"><label>Senha atual</label>
+        <input type="password" name="atual" required></div>
+      <div class="field" style="margin-top:12px"><label>Nova senha</label>
+        <input type="password" name="nova" required></div>
+      <div class="field" style="margin-top:12px"><label>Confirmar nova senha</label>
+        <input type="password" name="conf" required></div>
+      <div style="margin-top:16px">
+        <button class="btn btn-green" type="submit">💾 Salvar senha</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

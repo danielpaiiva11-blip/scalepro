@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Bloqueios · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Bloqueios — {{ f.nome }}</h1>
+    <div class="sub">Férias, atestado e folgas (dias em que não pode trabalhar)</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('funcionarios') }}">← Voltar</a>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Adicionar bloqueio</h2>
+  <form method="post" class="form-row">
+    <div class="field" style="min-width:160px"><label>Data</label>
+      <input type="date" name="data" required></div>
+    <div class="field" style="min-width:180px"><label>Motivo</label>
+      <select name="motivo">
+        <option>Férias</option>
+        <option>Atestado</option>
+        <option>Folga</option>
+        <option>Outro</option>
+      </select></div>
+    <button class="btn btn-green" type="submit">+ Adicionar</button>
+  </form>
+</div>
+
+<div class="card anim anim-2">
+  <h2>Bloqueios futuros</h2>
+  {% if bloqueios %}
+  <table>
+    <thead><tr><th>Data</th><th>Motivo</th><th></th></tr></thead>
+    <tbody>
+      {% for b in bloqueios %}
+      <tr>
+        <td><strong>{{ b.data[8:10] }}/{{ b.data[5:7] }}/{{ b.data[:4] }}</strong></td>
+        <td><span class="badge {{ 'b-amber' if b.motivo == 'Férias' else ('b-red' if b.motivo == 'Atestado' else 'b-blue') }}">{{ b.motivo }}</span></td>
+        <td style="text-align:right">
+          <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_bloqueio', bid=b.id) }}"
+             onclick="return confirm('Remover este bloqueio?')">Remover</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nenhum bloqueio futuro. O funcionário está liberado para escalas.</p>
+  {% endif %}
+</div>
+{% endblock %}

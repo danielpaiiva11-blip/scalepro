@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Calendário Operacional · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Central de Calendário Operacional</h1>
+    <div class="sub">País: Brasil · UF: Roraima · Município: Boa Vista — origem: <strong>{{ fonte }}</strong></div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <form method="post" action="{{ url_for('sincronizar_feriados') }}" style="margin:0">
+      <button class="btn btn-outline" type="submit">🔁 Sincronizar calendário</button>
+    </form>
+    <form method="get" style="margin:0" class="form-row">
+      <select name="ano" onchange="this.form.submit()" style="width:auto">
+        {% for a in [2025, 2026, 2027] %}
+        <option value="{{ a }}" {{ 'selected' if a == ano }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Cadastrar data especial</h2>
+  <form method="post" class="form-row">
+    <div class="field" style="min-width:140px"><label>Data</label><input type="date" name="data" required></div>
+    <div class="field" style="flex:1; min-width:180px"><label>Nome</label><input type="text" name="nome" required></div>
+    <div class="field" style="min-width:150px"><label>Tipo</label>
+      <select name="tipo">{% for t in tipos %}<option>{{ t }}</option>{% endfor %}</select></div>
+    <div class="field" style="min-width:140px"><label>Esfera</label>
+      <select name="esfera">{% for e in esferas %}<option>{{ e }}</option>{% endfor %}</select></div>
+    <button class="btn btn-green" type="submit">+ Adicionar</button>
+  </form>
+</div>
+
+{% for f in feriados %}
+<div class="card anim" style="animation-delay: {{ loop.index0 * 0.04 }}s">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+    <div>
+      <h2 style="margin:0">{{ f.nome }}</h2>
+      <div class="muted" style="margin-top:4px">
+        {{ f.data[8:10] }}/{{ f.data[5:7] }}/{{ f.data[:4] }}
+        · <span class="badge b-blue">{{ f.tipo }}</span>
+        <span class="badge b-purple">{{ f.esfera }}</span>
+        {% if f.fonte %}<span class="badge b-gray">{{ f.fonte }}</span>{% endif %}
+      </div>
+    </div>
+    <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_feriado', fid=f.id) }}"
+       onclick="return confirm('Remover {{ f.nome }} do calendário?')">Remover</a>
+  </div>
+
+  <!-- Impacto por setor -->
+  <form method="post" action="{{ url_for('salvar_impacto', fid=f.id) }}" style="margin-top:12px">
+    <p class="muted" style="margin-bottom:6px">Impacto na demanda por setor (% a mais):</p>
+    <div class="form-row">
+      {% for s in setores %}
+      <div class="field" style="flex:1; min-width:120px">
+        <label>{{ s.nome }}</label>
+        <input type="number" name="imp_{{ s.id }}" min="0" max="100"
+               value="{{ imp_map.get(f.id, {}).get(s.nome, '') }}" placeholder="0">
+      </div>
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">Salvar impacto</button>
+    </div>
+  </form>
+</div>
+{% else %}
+<div class="card anim"><p class="empty">Nenhuma data cadastrada para {{ ano }}. Sincronize o calendário oficial ou adicione manualmente.</p></div>
+{% endfor %}
+{% endblock %}

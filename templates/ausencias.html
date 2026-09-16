@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Central de Ausências · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Central de Ausências</h1>
+    <div class="sub">Falta, atestado, férias, afastamento, treinamento e atraso</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('ausencia_impacto') }}">⚡ Ver impacto de hoje</a>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Registrar ausência</h2>
+  <form method="post" action="{{ url_for('add_ausencia') }}" class="form-row">
+    <div class="field" style="flex:2; min-width:200px"><label>Funcionário</label>
+      <select name="funcionario_id" required>
+        <option value="">—</option>
+        {% for f in funcionarios %}<option value="{{ f.id }}">{{ f.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="min-width:150px"><label>Tipo</label>
+      <select name="tipo">
+        {% for t in tipos %}<option>{{ t }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="min-width:150px"><label>Data</label>
+      <input type="date" name="data" required></div>
+    <div class="field" style="flex:1; min-width:180px"><label>Observação</label>
+      <input type="text" name="observacao" placeholder="Opcional"></div>
+    <button class="btn btn-green" type="submit">+ Registrar</button>
+  </form>
+</div>
+
+<div class="card anim anim-2">
+  <h2>Ausências futuras</h2>
+  {% if ausencias %}
+  <table>
+    <thead><tr><th>Data</th><th>Funcionário</th><th>Setor</th><th>Tipo</th><th>Observação</th><th></th></tr></thead>
+    <tbody>
+      {% for a in ausencias %}
+      <tr>
+        <td><strong>{{ a.data[8:10] }}/{{ a.data[5:7] }}/{{ a.data[:4] }}</strong></td>
+        <td>{{ a.nome }}<br><span class="muted">{{ a.matricula }}</span></td>
+        <td>{% if a.setor %}<span class="badge b-purple">{{ a.setor }}</span>{% else %}—{% endif %}</td>
+        <td><span class="badge {{ 'b-red' if a.tipo=='Falta' else ('b-amber' if a.tipo=='Atestado' else ('b-blue' if a.tipo=='Férias' else 'b-gray')) }}">{{ a.tipo }}</span></td>
+        <td class="muted">{{ a.observacao or '—' }}</td>
+        <td style="text-align:right">
+          <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_ausencia', aid=a.id) }}"
+             onclick="return confirm('Remover esta ausência?')">Remover</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nenhuma ausência futura registrada.</p>
+  {% endif %}
+</div>
+{% endblock %}

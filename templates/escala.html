@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Ver Escala · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Escala de {{ MESES[mes-1] }} de {{ ano }}</h1>
+    <div class="sub">{{ escala|length }} dias · tipo: {{ {'fds':'Fins de semana','feriado':'Feriados','semana':'Mês inteiro'}[tipo] }}</div>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+    <button class="btn btn-green" onclick="abrirModal()">📄 Exportar PDF</button>
+    <a class="btn btn-outline" href="{{ url_for('exportar_csv', ano=ano, mes=mes, setor_id=setor_id or '') }}">📊 Exportar Excel</a>
+    <form method="get" class="form-row" style="margin:0">
+      <select name="mes" style="width:auto">
+        {% for m in range(1, 13) %}
+        <option value="{{ m }}" {{ 'selected' if m == mes }}>{{ MESES[m-1] }}</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="ano" value="{{ ano }}" style="width:100px">
+      <select name="tipo" style="width:auto">
+        <option value="fds" {{ 'selected' if tipo == 'fds' }}>Fins de semana</option>
+        <option value="feriado" {{ 'selected' if tipo == 'feriado' }}>Feriados</option>
+        <option value="semana" {{ 'selected' if tipo == 'semana' }}>Mês inteiro</option>
+      </select>
+      <select name="setor_id" style="width:auto">
+        <option value="">Todos os setores</option>
+        {% for s in setores %}
+        <option value="{{ s.id }}" {{ 'selected' if s.id == setor_id }}>{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">Buscar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de exportação -->
+<div id="modalPdf" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.5);
+            z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:26px 28px; width:90%; max-width:440px;
+              box-shadow:0 20px 60px rgba(0,0,0,.3); animation: subirModal .25s ease;">
+    <h2 style="margin:0 0 6px">Exportar escala em PDF</h2>
+    <p class="muted" style="margin:0 0 18px">Escolha qual setor será impresso no documento.</p>
+    <div class="field" style="margin-bottom:16px">
+      <label>Setor</label>
+      <select id="pdfSetor" style="width:100%">
+        <option value="">Todos os setores</option>
+        {% for s in setores %}
+        <option value="{{ s.id }}">{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:flex-end">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="gerarPdf()">📄 Gerar PDF</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes subirModal { from { opacity:0; transform: translateY(20px) scale(.96); } to { opacity:1; transform:none; } }</style>
+<script>
+function abrirModal(){ document.getElementById('modalPdf').style.display='flex'; }
+function fecharModal(){ document.getElementById('modalPdf').style.display='none'; }
+function gerarPdf(){
+  var setor = document.getElementById('pdfSetor').value;
+  var url = "{{ url_for('exportar_pdf') }}?ano=" + encodeURIComponent('{{ ano }}') +
+            "&mes=" + encodeURIComponent('{{ mes }}') +
+            "&tipo=" + encodeURIComponent('{{ tipo }}') +
+            "&setor_id=" + encodeURIComponent(setor);
+  window.location.href = url;
+  setTimeout(fecharModal, 300);
+}
+// fecha modal ao clicar fora
+document.getElementById('modalPdf').addEventListener('click', function(e){
+  if(e.target === this) fecharModal();
+});
+</script>
+
+<div class="grid g2">
+  <div>
+    {% for item in escala %}
+    <div class="day-card anim" style="animation-delay: {{ loop.index0 * 0.04 }}s">
+      <div class="day-head">
+        <div>
+          <div class="dow">{{ DIAS_SEMANA[item.data.weekday()] }} · {{ item.data.strftime('%d/%m/%Y') }}</div>
+          <div class="date">{{ item.data.strftime('%B/%Y') if False else item.data.strftime('%d/%m/%Y') }}</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          {% set sc = item.status %}
+          <span class="badge {{ 'b-green' if sc == 'publicada' else ('b-blue' if sc == 'aprovada' else ('b-purple' if sc == 'validada' else 'b-gray')) }}">
+            {{ {'rascunho':'Rascunho','validada':'Validada','aprovada':'Aprovada','publicada':'Publicada','encerrada':'Encerrada'}[sc] }}</span>
+          <span class="badge {{ 'b-green' if item.pessoas else 'b-gray' }}">
+            {{ item.pessoas|length }} escalado{{ 's' if item.pessoas|length != 1 }}</span>
+          {% if item.pessoas %}
+          <form method="post" action="{{ url_for('mudar_status') }}" style="display:flex; gap:4px">
+            <input type="hidden" name="data" value="{{ item.data.isoformat() }}">
+            <select name="status" style="width:auto; padding:5px 8px; font-size:12px">
+              <option value="rascunho" {{ 'selected' if sc == 'rascunho' }}>Rascunho</option>
+              <option value="validada" {{ 'selected' if sc == 'validada' }}>Validada</option>
+              <option value="aprovada" {{ 'selected' if sc == 'aprovada' }}>Aprovada</option>
+              <option value="publicada" {{ 'selected' if sc == 'publicada' }}>Publicada</option>
+              <option value="encerrada" {{ 'selected' if sc == 'encerrada' }}>Encerrada</option>
+            </select>
+            <button class="btn btn-sm btn-outline" type="submit">Aplicar</button>
+          </form>
+          <form method="post" action="{{ url_for('remover_dia') }}"
+                onsubmit="return confirm('Remover a escala deste dia?')">
+            <input type="hidden" name="data" value="{{ item.data.isoformat() }}">
+            <button class="btn btn-sm btn-danger" type="submit">Remover</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <div class="day-body">
+        {% if item.pessoas %}
+        <table>
+          <thead><tr><th style="width:36px" class="num">#</th><th>Nome</th><th>Matrícula</th><th>Cargo</th><th>Setor</th><th>Turno</th><th>Horário</th><th></th></tr></thead>
+          <tbody>
+            {% for p in item.pessoas %}
+            <tr>
+              <td class="num muted">{{ loop.index }}</td>
+              <td><strong>{{ p.nome }}</strong></td>
+              <td>{{ p.matricula or '—' }}</td>
+              <td>{{ p.cargo or '—' }}</td>
+              <td>{% if p.setor %}<span class="badge b-purple">{{ p.setor }}</span>{% else %}—{% endif %}</td>
+              <td>{% if p.turno %}<span class="badge b-blue">{{ p.turno }}</span>{% else %}—{% endif %}</td>
+              <td>{% if p.entrada and p.saida %}<span class="muted" style="font-weight:600">{{ p.entrada }} – {{ p.saida }}</span>{% else %}—{% endif %}</td>
+              <td style="text-align:right"><a class="btn btn-sm btn-outline"
+                 href="{{ url_for('explicar_escala', fid=p.funcionario_id, data=item.data.isoformat(), setor_id=setor_id or '', tipo=tipo) }}"
+                 title="Por que esta pessoa foi selecionada?">?</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="empty">Sem escala gerada para este dia.
+          <a href="{{ url_for('gerar') }}">Gerar agora →</a></p>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card anim"><p class="empty">Nenhum dia encontrado para esse tipo/período.</p></div>
+    {% endfor %}
+  </div>
+
+  <div>
+    <div class="card anim" style="position:sticky; top:20px">
+      <h2>Justiça do rodízio</h2>
+      <p class="muted">Distribuição: quantos funcionários têm cada quantidade de escalas. Quanto mais equilibrado, mais justo.</p>
+      {% if dist_labels %}
+      <canvas id="chJustica" height="130"></canvas>
+      {% endif %}
+      <h2 style="margin-top:16px">Ranking do rodízio</h2>
+      <table>
+        <thead><tr><th>Funcionário</th><th class="num">Escalas</th></tr></thead>
+        <tbody>
+          {% for r in ranking %}
+          <tr><td>{{ r.nome }}</td>
+              <td class="num"><span class="badge b-blue">{{ r.total }}</span></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if dist_labels %}
+<script>
+new Chart(chJustica, {
+  type: "bar",
+  data: { labels: {{ dist_labels|tojson }},
+          datasets: [{ label: "Funcionários", data: {{ dist_vals|tojson }},
+                       backgroundColor: "#2563eb", borderRadius: 6 }] },
+  options: { responsive: true, plugins: { legend: { display: false } },
+    scales: { y: { ticks: { precision: 0 }, title: { display: true, text: "Qtd. funcionários" } },
+              x: { title: { display: true, text: "Nº de escalas" } } },
+    animation: { duration: 800 } }
+});
+</script>
+{% endif %}
+{% endblock %}

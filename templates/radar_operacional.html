@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Análise Operacional · ScalePro{% endblock %}
+{% block content %}
+<style>
+  .robustez-bar { height: 12px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+  .robustez-bar > div { height: 100%; border-radius: 99px; transition: width 1s ease;
+                        background: {{ '#ef4444' if res.robustez < 50 else ('#f59e0b' if res.robustez < 75 else '#22c55e') }}; }
+  .cenario { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px;
+             border: 1px solid var(--border); border-radius: 9px; margin-bottom: 8px; }
+  .cenario .cob { font-weight: 700; }
+  .hm-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  .hm-table th, .hm-table td { border: 1px solid var(--border); padding: 6px; text-align: center; }
+  .hm-table td.setor { text-align: left; font-weight: 600; }
+  .cel-ok { background: #dcfce7; color: #166534; font-weight: 700; }
+  .cel-at { background: #fef3c7; color: #92400e; font-weight: 700; }
+  .cel-ri { background: #fed7aa; color: #7c2d12; font-weight: 700; }
+  .cel-cr { background: #fee2e2; color: #991b1b; font-weight: 700; }
+  .cel-nv { background: #f1f5f9; color: #94a3b8; }
+  .sug { display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+         border: 1px solid var(--border); border-radius: 9px; margin-bottom: 8px; font-size: 13.5px; }
+</style>
+
+<div class="page-header anim">
+  <div>
+    <h1>Análise Operacional</h1>
+    <div class="sub">Resiliência, mapa de calor e remanejamento — a escala sob pressão</div>
+  </div>
+</div>
+
+<!-- Filtro de dia e setor -->
+<div class="card anim">
+  <form method="get" class="form-row">
+    <div class="field"><label>Data</label><input type="date" name="dia" value="{{ dia }}"></div>
+    <div class="field"><label>Setor</label>
+      <select name="setor_id">
+        <option value="">Todos os setores</option>
+        {% for s in setores %}<option value="{{ s.id }}" {{ 'selected' if s.id == setor_id }}>{{ s.nome }}</option>{% endfor %}
+      </select></div>
+    <button class="btn btn-primary" type="submit">Analisar</button>
+  </form>
+</div>
+
+<!-- Teste de resiliência -->
+<div class="card anim anim-1">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+    <div>
+      <h2 style="margin:0">🛡 Teste de Resiliência</h2>
+      <p class="muted" style="margin-top:4px">Como a escala se comporta sob estresse (sem alterar dados reais)</p>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:38px; font-weight:900; color:{{ '#22c55e' if res.robustez >= 75 else ('#f59e0b' if res.robustez >= 50 else '#ef4444') }}">{{ res.robustez }}/100</div>
+      <div class="muted" style="font-size:12px">ROBUSTEZ</div>
+    </div>
+  </div>
+  <div class="robustez-bar" style="margin-top:8px"><div style="width: {{ res.robustez }}%"></div></div>
+  <div class="muted" style="margin-top:6px">Cobertura base: <strong>{{ res.cobertura_base }}%</strong></div>
+</div>
+
+<div class="card anim anim-2">
+  <h2>Cenários simulados</h2>
+  {% for c in res.cenarios %}
+  <div class="cenario">
+    <span>{{ c.cenario }}</span>
+    <span class="cob" style="color:{{ '#22c55e' if c.cobertura >= 85 else ('#f59e0b' if c.cobertura >= 70 else '#ef4444') }}">{{ c.cobertura }}%</span>
+  </div>
+  {% endfor %}
+  {% if res.setores_vulneraveis %}
+  <div style="margin-top:10px">
+    <strong style="font-size:13px">Setores vulneráveis:</strong>
+    {% for v in res.setores_vulneraveis %}<span class="badge b-red">{{ v }}</span>{% endfor %}
+  </div>
+  {% else %}
+  <p class="muted" style="margin-top:10px">Nenhum setor vulnerável detectado.</p>
+  {% endif %}
+</div>
+
+<!-- Heatmap -->
+<div class="card anim anim-3">
+  <h2>🗺 Heatmap Operacional (setor × faixa)</h2>
+  <p class="muted" style="margin-top:-4px">Cobertura por célula. Clique mental: verde = ok, amarelo = atenção, laranja = risco, vermelho = crítico.</p>
+  <div style="overflow-x:auto">
+    <table class="hm-table">
+      <thead><tr><th>Setor</th>{% for fx in hm.faixas %}<th>{{ fx }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for linha in hm.matriz %}
+        <tr>
+          <td class="setor">{{ linha.setor }}</td>
+          {% for fx in hm.faixas %}
+          {% set v = linha[fx] %}
+          <td class="{{ 'cel-ok' if v is not none and v >= 100 else ('cel-at' if v is not none and v >= 80 else ('cel-ri' if v is not none and v >= 60 else ('cel-cr' if v is not none else 'cel-nv'))) }}">
+            {{ v ~ '%' if v is not none else '—' }}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Central de remanejamento -->
+<div class="card anim anim-4">
+  <h2>🔁 Central de Remanejamento</h2>
+  <p class="muted" style="margin-top:-4px">Setores com déficit ou excesso de efetivo.</p>
+  <table style="margin-bottom:12px">
+    <thead><tr><th>Setor</th><th class="num">Necessário</th><th class="num">Escalado</th><th class="num">Saldo</th><th class="num">Cobertura</th></tr></thead>
+    <tbody>
+      {% for i in rem.setores %}
+      <tr>
+        <td><strong>{{ i.setor }}</strong></td>
+        <td class="num">{{ i.necessario }}</td>
+        <td class="num">{{ i.escalado }}</td>
+        <td class="num" style="font-weight:700; color:{{ '#16a34a' if i.saldo >= 0 else '#dc2626' }}">{{ '+'+i.saldo|string if i.saldo > 0 else i.saldo }}</td>
+        <td class="num">{{ i.cobertura ~ '%' if i.cobertura is not none else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if rem.sugestoes %}
+  <h3 style="font-size:14px">Sugestões de movimentação (apenas habilitados)</h3>
+  {% for s in rem.sugestoes %}
+  <div class="sug">
+    <span>👤 <strong>{{ s.funcionario }}</strong></span>
+    <span>de <span class="badge b-purple">{{ s.de }}</span> → para <span class="badge b-blue">{{ s.para }}</span></span>
+    <span class="muted">impacto: {{ s.impacto_de }}% → {{ s.impacto_para }}%</span>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty">Sem sugestões de remanejamento no momento.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Funcionários · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Funcionários</h1>
+    <div class="sub">{{ ativos }} ativos de {{ funcionarios|length }} listados</div>
+  </div>
+  <a class="btn btn-outline" href="{{ url_for('importar_funcionarios') }}">📥 Importar em lote</a>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Novo funcionário</h2>
+  <form method="post" action="{{ url_for('add_funcionario') }}?setor_id={{ setor_id or '' }}" class="form-row">
+    <div class="field" style="flex:2; min-width:180px"><label>Nome completo</label>
+      <input type="text" name="nome" required></div>
+    <div class="field" style="flex:1; min-width:110px"><label>Matrícula</label>
+      <input type="text" name="matricula"></div>
+    <div class="field" style="flex:1; min-width:130px"><label>Cargo</label>
+      <input type="text" name="cargo" placeholder="Ex.: Operador de caixa"></div>
+    <div class="field" style="flex:1; min-width:140px"><label>Setor</label>
+      <select name="setor_id">
+        <option value="">—</option>
+        {% for s in setores %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="flex:1; min-width:130px"><label>Admissão</label>
+      <input type="date" name="admissao"></div>
+    <div class="field" style="flex:1; min-width:130px"><label>Turno</label>
+      <select name="turno_id">
+        <option value="">—</option>
+        {% for t in turnos %}<option value="{{ t.id }}">{{ t.nome }}</option>{% endfor %}
+      </select></div>
+    <button class="btn btn-green" type="submit">+ Adicionar</button>
+  </form>
+</div>
+
+<div class="card anim anim-2">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px">
+    <h2 style="margin:0">Equipe</h2>
+    <form method="get" class="form-row" style="margin:0">
+      <input type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome, matrícula ou cargo..." style="min-width:220px">
+      {% if g.user.role == 'admin' %}
+      <select name="setor_id" onchange="this.form.submit()" style="width:auto">
+        <option value="">Todos os setores</option>
+        {% for s in setores %}
+        <option value="{{ s.id }}" {{ 'selected' if s.id == setor_id }}>{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <input type="hidden" name="ord" value="{{ ord }}">
+      <button class="btn btn-primary" type="submit">Buscar</button>
+      {% if busca %}<a class="btn btn-outline" href="{{ url_for('funcionarios', setor_id=setor_id or '') }}">Limpar</a>{% endif %}
+    </form>
+  </div>
+
+  {% if funcionarios %}
+  <table>
+    <thead><tr>
+      <th><a href="{{ url_for('funcionarios', q=busca, setor_id=setor_id or '', ord='nome') }}" style="text-decoration:none;color:inherit">Nome{{ ' ↓' if ord=='nome' }}</a></th>
+      <th><a href="{{ url_for('funcionarios', q=busca, setor_id=setor_id or '', ord='matricula') }}" style="text-decoration:none;color:inherit">Matrícula{{ ' ↓' if ord=='matricula' }}</a></th>
+      <th><a href="{{ url_for('funcionarios', q=busca, setor_id=setor_id or '', ord='cargo') }}" style="text-decoration:none;color:inherit">Cargo{{ ' ↓' if ord=='cargo' }}</a></th>
+      <th><a href="{{ url_for('funcionarios', q=busca, setor_id=setor_id or '', ord='setor') }}" style="text-decoration:none;color:inherit">Setor{{ ' ↓' if ord=='setor' }}</a></th>
+      <th>Turno</th>
+      <th class="num"><a href="{{ url_for('funcionarios', q=busca, setor_id=setor_id or '', ord='total_escalas') }}" style="text-decoration:none;color:inherit">Escalas{{ ' ↓' if ord=='total_escalas' }}</a></th>
+      <th>Última</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for f in funcionarios %}
+      <tr class="{{ '' if f.ativo else 'inativo' }}" style="animation: fadeUp .4s {{ loop.index0 * 0.02 }}s both">
+        <td><strong>{{ f.nome }}</strong></td>
+        <td>{{ f.matricula or '—' }}</td>
+        <td>{{ f.cargo or '—' }}</td>
+        <td>{% if f.setor %}<span class="badge b-purple">{{ f.setor }}</span>{% else %}—{% endif %}</td>
+        <td>
+          <form method="post" action="{{ url_for('set_funcionario_turno', fid=f.id) }}">
+            <select name="turno_id" onchange="this.form.submit()" style="width:118px; padding:8px 10px; font-size:14px; font-weight:700; color:#0f172a">
+              <option value="">—</option>
+              {% for t in turnos %}
+              <option value="{{ t.id }}" {{ 'selected' if f.turno == t.nome }}>{{ t.nome }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+        <td class="num">{{ f.total_escalas }}</td>
+        <td>{{ f.ultima[8:10] + '/' + f.ultima[5:7] + '/' + f.ultima[:4] if f.ultima else 'Nunca' }}</td>
+        <td><span class="badge {{ 'b-green' if f.ativo else 'b-gray' }}">
+          {{ 'Ativo' if f.ativo else 'Inativo' }}</span></td>
+        <td style="white-space:nowrap; text-align:right">
+          <a class="btn btn-sm btn-360" href="{{ url_for('funcionario360', fid=f.id) }}" title="Visão 360°">👁</a>
+          <a class="btn btn-sm btn-outline" href="javascript:void(0)" title="Editar"
+             onclick="abrirEdicao({{ f.id }})">✏️</a>
+          <a class="btn btn-sm btn-outline" href="{{ url_for('bloqueios', fid=f.id) }}" title="Férias/atestado">🚫</a>
+          <a class="btn btn-sm btn-outline" href="{{ url_for('toggle_funcionario', fid=f.id) }}"
+             title="{{ 'Desativar' if f.ativo else 'Reativar' }}">{{ '⏸️' if f.ativo else '▶️' }}</a>
+          <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_funcionario', fid=f.id) }}"
+             title="Excluir"
+             onclick="return confirm('Excluir {{ f.nome }}? O histórico de escalas também será apagado.')">🗑️</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nenhum funcionário encontrado{% if busca %} com "{{ busca }}"{% endif %}.</p>
+  {% endif %}
+</div>
+
+<!-- Modal de edição -->
+<div id="modalEditar" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:26px 28px; width:90%; max-width:520px; box-shadow:0 20px 60px rgba(0,0,0,.3); animation:editarModal .2s ease;">
+    <h2 style="margin:0 0 16px">Editar funcionário</h2>
+    <form method="post" id="formEditar" class="form-row">
+      <div class="field" style="flex:2; min-width:200px"><label>Nome completo</label>
+        <input type="text" name="nome" id="edNome" required></div>
+      <div class="field" style="flex:1; min-width:110px"><label>Matrícula</label>
+        <input type="text" name="matricula" id="edMatricula"></div>
+      <div class="field" style="flex:1; min-width:130px"><label>Cargo</label>
+        <input type="text" name="cargo" id="edCargo"></div>
+      {% if g.user.role == 'admin' %}
+      <div class="field" style="flex:1; min-width:140px"><label>Setor</label>
+        <select name="setor_id" id="edSetor">
+          <option value="">—</option>
+          {% for s in setores %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+        </select></div>
+      {% else %}
+      <input type="hidden" name="setor_id" value="{{ g.user.setor_id }}">
+      {% endif %}
+      <div class="field" style="flex:1; min-width:130px"><label>Admissão</label>
+        <input type="date" name="admissao" id="edAdmissao"></div>
+      <div class="field" style="flex:1; min-width:130px"><label>Turno</label>
+        <select name="turno_id" id="edTurno">
+          <option value="">—</option>
+          {% for t in turnos %}<option value="{{ t.id }}">{{ t.nome }}</option>{% endfor %}
+        </select></div>
+    </form>
+    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px">
+      <button class="btn btn-outline" onclick="fecharEdicao()">Cancelar</button>
+      <button class="btn btn-green" onclick="salvarEdicao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes editarModal { from { opacity:0; transform: translateY(15px); } to { opacity:1; transform:none; } }</style>
+
+<script>
+var edId = null;
+var DADOS_FUNC = {{ funcionarios_ed | tojson }};
+function abrirEdicao(id){
+  var dados = DADOS_FUNC.find(function(d){ return d.id === id; });
+  if(!dados) return;
+  edId = id;
+  document.getElementById('edNome').value = dados.nome;
+  document.getElementById('edMatricula').value = dados.matricula;
+  document.getElementById('edCargo').value = dados.cargo;
+  document.getElementById('edAdmissao').value = dados.admissao;
+  var se = document.getElementById('edSetor'); if(se) se.value = dados.setor_id;
+  document.getElementById('edTurno').value = (dados.turno ? turnoIdPorNome(dados.turno) : '');
+  document.getElementById('modalEditar').style.display = 'flex';
+}
+function turnoIdPorNome(nome){
+  var sel = document.getElementById('edTurno');
+  for (var i=0; i<sel.options.length; i++){
+    if (sel.options[i].text === nome) return sel.options[i].value;
+  }
+  return '';
+}
+function fecharEdicao(){ document.getElementById('modalEditar').style.display='none'; edId=null; }
+function salvarEdicao(){
+  document.getElementById('formEditar').action = '/funcionarios/editar/' + edId;
+  document.getElementById('formEditar').submit();
+}
+document.getElementById('modalEditar').addEventListener('click', function(e){
+  if(e.target === this) fecharEdicao();
+});
+</script>
+{% endblock %}

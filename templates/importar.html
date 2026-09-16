@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Importar · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Importar funcionários</h1>
+    <div class="sub">Cole uma lista para cadastrar em massa</div>
+  </div>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Cole os dados</h2>
+  <p class="muted">Formato: <code>Nome;Matrícula;Cargo</code> (um por linha). Matrícula e cargo são opcionais.</p>
+  <form method="post">
+    <div class="field" style="margin-bottom:14px"><label>Setor de destino</label>
+      <select name="setor_id">
+        <option value="">—</option>
+        {% for s in setores %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Lista (nome;matricula;cargo)</label>
+      <textarea name="dados" rows="12" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:9px; font-family:monospace; font-size:13px"
+        placeholder="Mariana Costa;20101;Operador de Caixa&#10;Paulo Mendes;20102;Fiscal de Caixa&#10;Ana Beatriz;20103;Repositor"></textarea></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-green" type="submit">📥 Importar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

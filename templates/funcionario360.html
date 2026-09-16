@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ f.nome }} · 360°{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div style="display:flex; gap:18px; align-items:center">
+    <div class="avatar" style="animation: pop .5s ease">{{ f.nome.strip()[0]|upper }}</div>
+    <div>
+      <h1>{{ f.nome }}</h1>
+      <div class="sub">
+        {% if f.matricula %}Mat. {{ f.matricula }} · {% endif %}
+        {{ f.cargo or 'Sem cargo' }} ·
+        {% if f.setor %}<span class="badge b-purple">{{ f.setor }}</span>{% else %}sem setor{% endif %}
+        · <span class="badge {{ 'b-green' if f.ativo else 'b-gray' }}">{{ 'Ativo' if f.ativo else 'Inativo' }}</span>
+        {% if f.turno %}<br><strong style="font-size:16px">Turno:</strong> <span class="badge b-blue" style="font-size:15px; font-weight:800; padding:5px 14px">{{ f.turno }}</span> <strong style="font-size:16px">{{ f.entrada }} – {{ f.saida }}</strong>{% endif %}
+        {% if f.intervalo %}<div class="muted" style="font-size:13px; margin-top:2px">☕ Intervalo: {{ f.intervalo }} · 8h de jornada</div>{% endif %}
+        {% if f.admissao %}<br>Na empresa desde {{ f.admissao[8:10] }}/{{ f.admissao[5:7] }}/{{ f.admissao[:4] }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a class="btn btn-green" href="{{ url_for('exportar_pdf_individual', fid=f.id) }}">📄 PDF individual</a>
+    <a class="btn btn-outline" href="{{ url_for('funcionarios') }}">← Voltar</a>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi anim anim-1" style="--kc:#2563eb">
+    <div class="k-label">Escalas totais</div>
+    <div class="k-value" data-count="{{ total }}">0</div>
+    <div class="k-hint">todas as alocações</div>
+  </div>
+  <div class="kpi anim anim-2" style="--kc:#f59e0b">
+    <div class="k-label">Fins de semana</div>
+    <div class="k-value" data-count="{{ fds }}">0</div>
+    <div class="k-hint">sábados e domingos</div>
+  </div>
+  <div class="kpi anim anim-3" style="--kc:#ef4444">
+    <div class="k-label">Feriados</div>
+    <div class="k-value" data-count="{{ feriados_n }}">0</div>
+    <div class="k-hint">dias de feriado</div>
+  </div>
+  <div class="kpi anim anim-4" style="--kc:#22c55e">
+    <div class="k-label">Horas extras est.</div>
+    <div class="k-value" data-count="{{ horas_extras }}" data-suffix="h">0</div>
+    <div class="k-hint">8h por dia extra</div>
+  </div>
+</div>
+
+{% if grafico.vals %}
+<div class="card anim anim-3">
+  <h2>Escalas por mês</h2>
+  <canvas id="chMes" height="90"></canvas>
+</div>
+{% endif %}
+
+<div class="grid g2eq">
+  <div class="card anim anim-4">
+    <h2>Próximas escalas</h2>
+    {% if proximas %}
+    <table>
+      <thead><tr><th>Data</th><th>Dia</th><th>Tipo</th></tr></thead>
+      <tbody>
+        {% for e in proximas %}
+        <tr>
+          <td><strong>{{ e.data[8:10] }}/{{ e.data[5:7] }}/{{ e.data[:4] }}</strong></td>
+          <td class="muted">{{ DIAS_SEMANA[(e.data | replace('-','') | int) is defined and 0 or 0] }}{{ '' }}</td>
+          <td><span class="badge {{ 'b-amber' if e.tipo == 'fds' else ('b-red' if e.tipo == 'feriado' else 'b-blue') }}">
+            {{ {'fds':'Fim de semana','feriado':'Feriado','semana':'Semana'}[e.tipo] }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">Nenhuma escala futura.</p>{% endif %}
+  </div>
+
+  <div class="card anim anim-5">
+    <h2>Histórico recente</h2>
+    {% if historico %}
+    <table>
+      <thead><tr><th>Data</th><th>Tipo</th></tr></thead>
+      <tbody>
+        {% for e in historico %}
+        <tr>
+          <td><strong>{{ e.data[8:10] }}/{{ e.data[5:7] }}/{{ e.data[:4] }}</strong></td>
+          <td><span class="badge b-gray">
+            {{ {'fds':'Fim de semana','feriado':'Feriado','semana':'Semana'}[e.tipo] }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">Ainda não trabalhou em escalas.</p>{% endif %}
+  </div>
+</div>
+
+<script>
+document.querySelectorAll("[data-count]").forEach(el => {
+  const target = +el.dataset.count, t0 = performance.now();
+  (function tick(t) {
+    const p = Math.min((t - t0) / 900, 1);
+    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + (el.dataset.suffix || "");
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+});
+{% if grafico.vals %}
+new Chart(chMes, { type: "line",
+  data: { labels: {{ grafico.labels|tojson }},
+          datasets: [{ label: "Escalas", data: {{ grafico.vals|tojson }},
+                       borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.12)",
+                       fill: true, tension: .35, pointRadius: 5,
+                       pointBackgroundColor: "#2563eb" }] },
+  options: { plugins: { legend: { display: false } },
+             scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+             animation: { duration: 1000, easing: "easeOutQuart" } } });
+{% endif %}
+</script>
+{% endblock %}

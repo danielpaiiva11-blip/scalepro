@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Usuários · ScalePro{% endblock %}
+{% block content %}
+<div class="page-header anim">
+  <div>
+    <h1>Usuários & Acessos</h1>
+    <div class="sub">Gerentes e supervisores com acesso por setor</div>
+  </div>
+</div>
+
+<div class="card anim anim-1">
+  <h2>Novo usuário</h2>
+  <form method="post" class="form-row">
+    <div class="field" style="min-width:150px"><label>Nome</label>
+      <input type="text" name="nome" required></div>
+    <div class="field" style="min-width:130px"><label>Login</label>
+      <input type="text" name="usuario" required></div>
+    <div class="field" style="min-width:130px"><label>Senha</label>
+      <input type="password" name="senha" required></div>
+    <div class="field" style="min-width:130px"><label>Cargo</label>
+      <input type="text" name="cargo" placeholder="Ex.: Supervisor"></div>
+    <div class="field" style="min-width:150px"><label>Setor</label>
+      <select name="setor_id">
+        <option value="">Todos (gerência)</option>
+        {% for s in setores %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field" style="min-width:140px"><label>Nível</label>
+      <select name="role">
+        <option value="supervisor">Supervisor (setor)</option>
+        <option value="admin">Administrador (tudo)</option>
+      </select></div>
+    <button class="btn btn-green" type="submit">+ Criar</button>
+  </form>
+</div>
+
+<div class="card anim anim-2">
+  <h2>Usuários cadastrados</h2>
+  <table>
+    <thead><tr><th>Nome</th><th>Login</th><th>Cargo</th><th>Setor</th><th>Nível</th><th></th></tr></thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td><strong>{{ u.nome }}</strong></td>
+        <td>{{ u.usuario }}</td>
+        <td>{{ u.cargo or '—' }}</td>
+        <td>{% if u.setor %}<span class="badge b-purple">{{ u.setor }}</span>
+            {% else %}<span class="badge b-blue">Todos</span>{% endif %}</td>
+        <td><span class="badge {{ 'b-amber' if u.role == 'admin' else 'b-green' }}">
+            {{ 'Administrador' if u.role == 'admin' else 'Supervisor' }}</span></td>
+        <td style="text-align:right">
+          <a class="btn btn-sm btn-danger" href="{{ url_for('excluir_usuario', uid=u.id) }}"
+             onclick="return confirm('Excluir o usuário {{ u.nome }}?')">Excluir</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
